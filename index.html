@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Vatavaraan — Cloud-Powered Weather Intelligence • Aishwarya Moundekar</title>
   <meta name="description" content="Vatavaraan — Cloud-Powered Weather Intelligence. Live forecasts via Open-Meteo. Deployed on GitHub Pages.">
-  <!-- Favicon placeholder: paste a 48x48 PNG at /favicon.png or update URL -->
   <link rel="icon" href="/favicon.png" type="image/png">
-
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -31,7 +28,6 @@
     }
     .container{ max-width:980px; margin:0 auto; position:relative; z-index:1; }
 
-    /* blobs */
     .blobs{ position:fixed; inset:0; pointer-events:none; z-index:0; }
     .blob{ position:absolute; filter: blur(30px); opacity:.65; border-radius:50%; transform:translate3d(0,0,0); animation: float 12s ease-in-out infinite; }
     .blob.a{ width:380px; height:380px; background:linear-gradient(135deg,var(--accent-a),var(--accent-c)); left:-80px; top:-70px; }
@@ -49,8 +45,8 @@
 
     .controls{ margin-top:14px; display:flex; gap:10px; align-items:center; }
     .search{ flex:1; display:flex; gap:8px; align-items:center; }
-    input[type="text"]{ flex:1; padding:12px 14px; border-radius:12px; border:1px solid rgba(15,23,42,0.06); background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,255,255,0.85)); font-size:14px; }
-    input[type="text"]:focus{ outline:none; box-shadow:0 10px 30px rgba(37,99,235,0.06); transform:translateY(-1px); }
+    input[type="text"], input[id="q"]{ flex:1; padding:12px 14px; border-radius:12px; border:1px solid rgba(15,23,42,0.06); background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,255,255,0.85)); font-size:14px; }
+    input[type="text"]:focus, input[id="q"]:focus{ outline:none; box-shadow:0 10px 30px rgba(37,99,235,0.06); transform:translateY(-1px); }
 
     .btn{ padding:10px 14px; border-radius:12px; border:0; cursor:pointer; font-weight:700; background:linear-gradient(180deg,#a8e3ff,#7fc8ff); color:#06385a; box-shadow:0 8px 20px rgba(37,99,235,0.12); }
     .btn.secondary{ background:linear-gradient(180deg,#ffe6f5,#ffd6e0); color:#6a2241; box-shadow:0 6px 18px rgba(233,46,149,0.06); }
@@ -85,7 +81,7 @@
       border: 1px solid rgba(15,23,42,0.04);
       margin-top:6px;
       overflow:hidden;
-    } 
+    }
     .suggest-item{
       padding:10px 12px;
       cursor:pointer;
@@ -98,7 +94,6 @@
     .suggest-item[aria-selected="true"]{ background: linear-gradient(90deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02)); }
     .suggest-meta{ color:var(--muted); font-size:12px; }
 
-
     .chartwrap{ margin-top:16px; border-radius:12px; padding:10px; background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.8)); box-shadow:0 8px 22px rgba(12,18,40,0.04); }
 
     .loader { display:inline-block; width:18px; height:18px; border-radius:50%; border:3px solid rgba(15,23,42,0.06); border-top-color:#7fc8ff; animation:spin 1s linear infinite; vertical-align:middle; margin-right:8px; }
@@ -108,7 +103,6 @@
 
     footer{ text-align:center; color:var(--muted); font-size:13px; margin-top:12px; }
 
-    /* small responsive */
     @media (max-width:720px){ .logo{ width:48px; height:48px; } .stat{ min-width:140px } }
   </style>
 </head>
@@ -138,6 +132,9 @@
           <div style="position:relative; flex:1;">
             <input id="q" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" placeholder="City name or lat,lon (e.g., Nagpur or 21.15,79.09)" autocomplete="off" />
             <div id="suggestions" role="listbox" style="position:absolute; left:0; right:0; z-index:60;"></div>
+          </div>
+          <button id="go" class="btn">Get Weather</button>
+        </div>
       </div>
 
       <div class="meta">
@@ -148,7 +145,7 @@
       <div class="chips" id="recent"></div>
     </div>
 
-    <div id="main" class="card main">
+    <div id="main" class="card main" aria-live="polite">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
           <div class="place" id="place">—</div>
@@ -176,7 +173,7 @@
       </div>
 
       <div style="margin-top:12px; font-weight:700; color:var(--muted)">Hourly (next 24h)</div>
-      <div id="hourly" class="hourly"></div>
+      <div id="hourly" class="hourly" role="list"></div>
 
       <div class="chartwrap" style="margin-top:10px">
         <canvas id="chart" height="80"></canvas>
@@ -216,7 +213,6 @@ function iconFor(code){ return weatherIcons[code] || '☁️' }
 /* ---------- geocode + fetch (Open-Meteo) ---------- */
 async function geocode(q){
   try{
-    // tolerant lat,lon detection (accept "19.2474,73.1373" or "19.2474 73.1373")
     const latlon = String(q).trim().match(/^\s*([+-]?\d+(?:\.\d+)?)\s*[,\s]\s*([+-]?\d+(?:\.\d+)?)\s*$/);
     if(latlon){
       const lat = parseFloat(latlon[1]);
@@ -224,8 +220,6 @@ async function geocode(q){
       console.log('geocode: parsed coords', lat, lon);
       return { lat, lon, name: `${lat.toFixed(4)}, ${lon.toFixed(4)}` };
     }
-
-    // otherwise call Open-Meteo geocoding
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`;
     console.log('geocode: calling', url);
     const res = await fetch(url);
@@ -242,9 +236,7 @@ async function geocode(q){
   }
 }
 
-
 async function fetchWeather(lat, lon){
-  // If you want to proxy through serverless for logging or to avoid rate limits, call your /api/fetchWeather endpoint instead (see serverless example)
   const params = new URLSearchParams({
     latitude: lat, longitude: lon,
     hourly:'temperature_2m,precipitation,weathercode',
@@ -275,7 +267,6 @@ function renderMain(data, placeName){
   document.getElementById('wind').textContent = (wind!=null? `${wind.toFixed(1)} km/h` : '--');
   document.getElementById('prec').textContent = (prec!=null? `${prec.toFixed(2)} mm` : '--');
 
-  // hourly cards
   const hv = document.getElementById('hourly'); hv.innerHTML='';
   const hrs = data.hourly;
   const labels = []; const temps = [];
@@ -287,22 +278,33 @@ function renderMain(data, placeName){
       const wc = hrs.weathercode ? hrs.weathercode[i] : null;
       const card = document.createElement('div'); card.className='hour';
       card.innerHTML = `<div class="time">${t}</div><div class="icon">${iconFor(wc)}</div><div class="t">${fmtTemp(tmp)}</div><div class="p">P:${p? p.toFixed(2):'0'} mm</div>`;
-      card.onclick = ()=>{ // toggle extra
-        const ex = card.querySelector('.extra'); if(ex) ex.remove(); else { const e=document.createElement('div'); e.className='extra'; e.style.marginTop='8px'; e.style.color='var(--muted)'; e.textContent = `Weather code: ${wc ?? 'n/a'}`; card.appendChild(e); }
-      };
+      card.onclick = ()=>{ const ex = card.querySelector('.extra'); if(ex) ex.remove(); else { const e=document.createElement('div'); e.className='extra'; e.style.marginTop='8px'; e.style.color='var(--muted)'; e.textContent = `Weather code: ${wc ?? 'n/a'}`; card.appendChild(e); } };
       hv.appendChild(card);
       labels.push(t.split(' ')[1]); temps.push(tmp);
     }
   }
 
-  // draw chart
   const ctx = document.getElementById('chart').getContext('2d');
   if(chartInstance) chartInstance.destroy();
   chartInstance = new Chart(ctx,{ type:'line', data:{ labels, datasets:[{ label:'Temperature', data:temps, fill:true, tension:0.3, borderWidth:2 }] }, options:{ responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:false } } } });
-
 }
 
 /* ---------- main search flow ---------- */
+async function doSearch(){
+  const q = document.getElementById('q').value.trim();
+  if(!q){ showError('Please enter a city or coordinates'); return; }
+  setBusy(true); document.getElementById('main').style.display='none'; document.getElementById('err').style.display='none';
+  try{
+    const g = await geocode(q);
+    const w = await fetchWeather(g.lat, g.lon);
+    renderMain(w, g.name);
+    addRecent(q);
+    setBusy(false);
+  }catch(e){
+    showError(e.message || 'Unknown error');
+  }
+}
+
 // Direct search using numeric coordinates — bypasses geocoding
 async function doSearchCoords(lat, lon, displayName){
   setBusy(true);
@@ -310,7 +312,6 @@ async function doSearchCoords(lat, lon, displayName){
   document.getElementById('err').style.display = 'none';
   try {
     const w = await fetchWeather(lat, lon);
-    // use the provided displayName (if any) else show lat,lon
     const name = displayName || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     renderMain(w, name);
     addRecent(name);
@@ -320,13 +321,11 @@ async function doSearchCoords(lat, lon, displayName){
   }
 }
 
-
 /* ---------- UI events ---------- */
 document.getElementById('go').addEventListener('click', ()=>doSearch());
 document.getElementById('q').addEventListener('keydown',(e)=>{ if(e.key==='Enter') doSearch(); });
 document.getElementById('unitToggle').addEventListener('click', ()=>{
-  unit = (unit==='C')? 'F' : 'C'; document.getElementById('unitToggle').textContent = (unit==='C'?'°C':'°F'); // re-render last query
-  const last = document.getElementById('q').value.trim(); if(last) doSearch();
+  unit = (unit==='C')? 'F' : 'C'; document.getElementById('unitToggle').textContent = (unit==='C'?'°C':'°F'); const last = document.getElementById('q').value.trim(); if(last) doSearch();
 });
 document.getElementById('themeToggle').addEventListener('click', ()=>{
   const cur = document.documentElement.getAttribute('data-theme'); const next = cur === 'dark' ? '' : 'dark';
@@ -342,12 +341,9 @@ if(navigator.geolocation){
   geoBtn.onclick = ()=>{
     setBusy(true);
     navigator.geolocation.getCurrentPosition(async (pos)=>{
-      // ensure we use plain ASCII comma and decimal dot
       const lat = Number(pos.coords.latitude);
       const lon = Number(pos.coords.longitude);
-      // set the input display (optional)
       document.getElementById('q').value = `${lat.toFixed(4)},${lon.toFixed(4)}`;
-      // call the direct coords search (bypasses geocoding)
       await doSearchCoords(lat, lon, `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
     }, (err)=>{
       showError('Location denied or unavailable');
@@ -355,8 +351,6 @@ if(navigator.geolocation){
   };
   document.querySelector('.search').appendChild(geoBtn);
 }
-
-
 
 /* ---------- Autocomplete (Open-Meteo) ---------- */
 (function(){
@@ -409,10 +403,8 @@ if(navigator.geolocation){
   function selectSuggestion(idx){
     const sel = suggestions[idx];
     if(!sel) return;
-    // fill input
     input.value = sel.display;
     clearSuggestions();
-    // if suggestion contains coords, call direct coords search
     if(sel.lat!=null && sel.lon!=null){
       doSearchCoords(sel.lat, sel.lon, sel.display);
     } else {
@@ -420,13 +412,11 @@ if(navigator.geolocation){
     }
   }
 
-  // debounce helper
   function debounce(fn, wait){
     let t;
     return function(...args){ clearTimeout(t); t = setTimeout(()=> fn.apply(this,args), wait); }
   }
 
-  // fetch suggestions from Open-Meteo geocoding API
   async function fetchSuggestions(term){
     if(!term || term.trim().length < 2){ clearSuggestions(); return; }
     if(controller) controller.abort();
