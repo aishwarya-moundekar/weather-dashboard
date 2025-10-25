@@ -239,15 +239,15 @@ async function geocode(q){
 
 
 async function fetchWeather(lat, lon){
-  // If you want to proxy through serverless for logging or to avoid rate limits, call your /api/fetchWeather endpoint instead (see serverless example)
-  const params = new URLSearchParams({
-    latitude: lat, longitude: lon,
-    hourly:'temperature_2m,precipitation,weathercode',
-    current_weather:'true', timezone:'auto'
-  });
-  const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+  // Call the serverless proxy on the same origin (Vercel will serve /api/fetchWeather)
+  const url = `/api/fetchWeather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
   const r = await fetch(url);
-  if(!r.ok) throw new Error('Weather API error');
+  if(!r.ok){
+    // Try to show upstream error if available
+    let j = null;
+    try { j = await r.json(); } catch(e){}
+    throw new Error((j && j.error) ? j.error : 'Weather API error');
+  }
   return r.json();
 }
 
