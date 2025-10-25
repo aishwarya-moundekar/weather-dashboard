@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Weather Dashboard — Cloud Mini Project</title>
+  <style>
+    body { font-family: Inter, Arial, sans-serif; margin:0; padding:24px; background:#f6f8fb; color:#0f172a; }
+    .card { max-width:720px; margin:24px auto; background:white; border-radius:12px; box-shadow:0 6px 22px rgba(20,20,40,0.08); padding:20px; }
+    h1{ margin:0 0 12px; font-size:20px; }
+    .controls { display:flex; gap:8px; margin-bottom:16px; }
+    input[type="text"]{ flex:1; padding:10px; border-radius:8px; border:1px solid #e6eef6; }
+    button{ padding:10px 14px; border-radius:8px; border:0; background:#2563eb; color:white; cursor:pointer; }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .stat{ flex:1; min-width:140px; background:#f8fbff; padding:12px; border-radius:8px; text-align:center; }
+    .small{ color:#475569; font-size:13px; }
+    .large{ font-size:20px; font-weight:600; margin-top:6px; }
+    footer{ text-align:center; margin-top:18px; color:#64748b; font-size:13px; }
+    .loader{ display:inline-block; width:18px; height:18px; border:3px solid #cbd5e1; border-top-color:#2563eb; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; }
+    @keyframes spin{ to { transform:rotate(360deg) } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Weather Dashboard (Open-Meteo)</h1>
+    <div class="controls">
+      <input id="locationInput" placeholder="Enter city e.g. New Delhi or lat,lon (23.03,72.58)" />
+      <button id="searchBtn">Get Weather</button>
+    </div>
+
+    <div id="result" style="display:none">
+      <div class="small" id="place"></div>
+      <div style="margin-top:12px" id="summary"></div>
+
+      <div class="row" style="margin-top:14px">
+        <div class="stat">
+          <div class="small">Temperature (°C)</div>
+          <div class="large" id="temp">--</div>
+        </div>
+        <div class="stat">
+          <div class="small">Wind (km/h)</div>
+          <div class="large" id="wind">--</div>
+        </div>
+        <div class="stat">
+          <div class="small">Precip (mm)</div>
+          <div class="large" id="prec">--</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <strong>Hourly (next 24h):</strong>
+        <div id="hourly" style="margin-top:8px; display:flex; gap:8px; overflow:auto; padding-bottom:6px"></div>
+      </div>
+    </div>
+
+    <div id="busy" style="display:none; margin-top:12px"><span class="loader"></span> loading…</div>
+    <div id="error" style="color:#dc2626; margin-top:12px; display:none"></div>
+
+    <footer>
+      Deployed on GitHub Pages — Data from Open-Meteo & OpenStreetMap.
+    </footer>
+  </div>
+
+<script>
+async function geocodeCity(q){
+  const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q);
+  const r = await fetch(url);
+  const data = await r.json();
+  if(!data || data.length===0) throw new Error('Location not found');
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
+}
+
+async function fetchWeather(lat, lon){
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    hourly: 'temperature_2m,precipitation,windgusts_10m',
+    current_weather: 'true',
+    timezone: 'auto'
+  });
+  const url = 'https://api.open-meteo.com/v1/forecast?' + params.toString();
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Weather API error');
+  return r.json();
+}
+
+function showError(msg){
+  document.getElementById('error').style.display='block';
+  document.getElementById('error').textContent = msg;
+  document.getElementById('busy').style.display='none';
+  document.getElementById('result').style.display='none';
+}
+
+document.getElementById('searchBtn').addEventListener('click', async ()=>{
+  document.getElementById('error').style.display='none';
+  document.getElementById('busy').style.display='block';
+  document.getElementById('result').style.display='none';
+  try{
+    const q = document.getElementById('locationInput').value.trim() || 'New Delhi';
+    let lat, lon, place;
+    const latlon = q.match(/^(-?\\d+(\\.\\d+)?),\\s*(-?\\d+(\\.\\d+)?)$/);
+    if(latlon){
+      lat = latlon[1]; lon = latlon[3]; place = `${lat}, ${lon}`;
+    } else {
+      const g = await geocodeCity(q);
+      lat = g.lat; lon = g.lon; place = g.name;
+    }
+    const w = await fetchWeather(lat, lon);
+    document.getElementById('place').textContent = place;
+    const cw = w.current_weather || {};
+    document.getElementById('temp').textContent = (cw.temperature !== undefined) ? cw.temperature.toFixed(1) : '--';
+    document.getElementById('wind').textContent = (cw.windspeed !== undefined) ? cw.windspeed.toFixed(1) : '--';
+    const next24 = w.hourly;
+    document.getElementById('prec').textContent = (next24 && next24.precipitation && next24.precipitation[0] !== undefined) ? next24.precipitation[0].toFixed(2) : '--';
+
+    const hourlyDiv = document.getElementById('hourly');
+    hourlyDiv.innerHTML = '';
+    if(next24 && next24.time){
+      for(let i=0;i<24 && i<next24.time.length;i++){
+        const t = next24.time[i];
+        const temp = next24.temperature_2m[i];
+        const p = next24.precipitation[i];
+        const el = document.createElement('div');
+        el.style.minWidth='120px';
+        el.style.background='#fff';
+        el.style.padding='8px';
+        el.style.borderRadius='8px';
+        el.style.boxShadow='0 6px 18px rgba(20,20,40,0.04)';
+        el.innerHTML = `<div style="font-size:12px;color:#64748b">${t.replace('T',' ')}</div>
+                        <div style="margin-top:6px;font-weight:600">${temp ? temp.toFixed(1) : '--'}°C</div>
+                        <div style="font-size:12px;color:#475569">P:${p ? p.toFixed(2) : '0'}mm</div>`;
+        hourlyDiv.appendChild(el);
+      }
+    }
+
+    document.getElementById('busy').style.display='none';
+    document.getElementById('result').style.display='block';
+  } catch(e){
+    showError(e.message || 'Unknown error');
+  }
+});
+
+document.getElementById('locationInput').value = 'New Delhi';
+document.getElementById('searchBtn').click();
+</script>
+</body>
+</html>
