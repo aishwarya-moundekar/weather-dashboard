@@ -77,6 +77,28 @@
     .hour .t{ font-weight:700; margin-top:8px; }
     .hour .p{ font-size:12px; color:var(--muted); margin-top:6px; }
 
+    /* Autocomplete dropdown styles */
+    .suggest-list{
+      background: var(--card-glass);
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+      border: 1px solid rgba(15,23,42,0.04);
+      margin-top:6px;
+      overflow:hidden;
+    } 
+    .suggest-item{
+      padding:10px 12px;
+      cursor:pointer;
+      font-size:14px;
+      color:var(--text);
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .suggest-item[aria-selected="true"]{ background: linear-gradient(90deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02)); }
+    .suggest-meta{ color:var(--muted); font-size:12px; }
+
+
     .chartwrap{ margin-top:16px; border-radius:12px; padding:10px; background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.8)); box-shadow:0 8px 22px rgba(12,18,40,0.04); }
 
     .loader { display:inline-block; width:18px; height:18px; border-radius:50%; border:3px solid rgba(15,23,42,0.06); border-top-color:#7fc8ff; animation:spin 1s linear infinite; vertical-align:middle; margin-right:8px; }
@@ -113,9 +135,9 @@
 
       <div class="controls">
         <div class="search">
-          <input id="q" placeholder="City name or lat,lon (e.g., Nagpur or 21.15,79.09)" />
-          <button id="go" class="btn">Get Weather</button>
-        </div>
+          <div style="position:relative; flex:1;">
+            <input id="q" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" placeholder="City name or lat,lon (e.g., Nagpur or 21.15,79.09)" autocomplete="off" />
+            <div id="suggestions" role="listbox" style="position:absolute; left:0; right:0; z-index:60;"></div>
       </div>
 
       <div class="meta">
@@ -334,6 +356,126 @@ if(navigator.geolocation){
   document.querySelector('.search').appendChild(geoBtn);
 }
 
+  // geolocation code
+  document.querySelector('.search').appendChild(geoBtn);
+}
+
+
+/* ---------- Autocomplete (Open-Meteo) ---------- */
+(function(){
+  const input = document.getElementById('q');
+  const sugBox = document.getElementById('suggestions');
+  let activeIndex = -1;
+  let suggestions = [];
+  let controller = null; // for aborting previous fetches
+
+  function clearSuggestions(){
+    suggestions = [];
+    activeIndex = -1;
+    sugBox.innerHTML = '';
+    input.setAttribute('aria-expanded','false');
+  }
+
+  function renderSuggestions(list){
+    suggestions = list;
+    sugBox.innerHTML = '';
+    if(!list || list.length===0) { input.setAttribute('aria-expanded','false'); return; }
+    const ul = document.createElement('div');
+    ul.className = 'suggest-list';
+    list.forEach((it, idx)=>{
+      const item = document.createElement('div');
+      item.className = 'suggest-item';
+      item.role = 'option';
+      item.id = `sugg-${idx}`;
+      item.setAttribute('aria-selected','false');
+      item.innerHTML = `<div>${it.display}</div><div class="suggest-meta">${it.meta}</div>`;
+      item.addEventListener('click', ()=> selectSuggestion(idx));
+      ul.appendChild(item);
+    });
+    sugBox.appendChild(ul);
+    input.setAttribute('aria-expanded','true');
+  }
+
+  function highlight(index){
+    const items = sugBox.querySelectorAll('.suggest-item');
+    if(items.length===0) return;
+    items.forEach((it,i)=> it.setAttribute('aria-selected', i===index ? 'true' : 'false'));
+    activeIndex = index;
+  }
+
+  function chooseActive(){
+    if(activeIndex >= 0 && activeIndex < suggestions.length){
+      selectSuggestion(activeIndex);
+    }
+  }
+
+  function selectSuggestion(idx){
+    const sel = suggestions[idx];
+    if(!sel) return;
+    // fill input
+    input.value = sel.display;
+    clearSuggestions();
+    // if suggestion contains coords, call direct coords search
+    if(sel.lat!=null && sel.lon!=null){
+      doSearchCoords(sel.lat, sel.lon, sel.display);
+    } else {
+      doSearch();
+    }
+  }
+
+  // debounce helper
+  function debounce(fn, wait){
+    let t;
+    return function(...args){ clearTimeout(t); t = setTimeout(()=> fn.apply(this,args), wait); }
+  }
+
+  // fetch suggestions from Open-Meteo geocoding API
+  async function fetchSuggestions(term){
+    if(!term || term.trim().length < 2){ clearSuggestions(); return; }
+    if(controller) controller.abort();
+    controller = new AbortController();
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(term)}&count=6`;
+    try{
+      const r = await fetch(url, { signal: controller.signal });
+      if(!r.ok){ clearSuggestions(); return; }
+      const j = await r.json();
+      if(!j || !j.results) { clearSuggestions(); return; }
+      const list = j.results.map(r=>({
+        display: `${r.name}${r.admin1? ', '+r.admin1 : ''}${r.country? ', '+r.country : ''}`,
+        meta: `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`,
+        lat: r.latitude,
+        lon: r.longitude
+      }));
+      renderSuggestions(list);
+    }catch(err){
+      if(err.name === 'AbortError') return;
+      console.error('autocomplete fetch error', err);
+      clearSuggestions();
+    }
+  }
+
+  const debouncedFetch = debounce(fetchSuggestions, 300);
+
+  input.addEventListener('input', (e)=> {
+    const v = e.target.value;
+    const isCoords = /^\s*[+-]?\d+(\.\d+)?\s*[,\s]\s*[+-]?\d+(\.\d+)?\s*$/.test(v);
+    if(isCoords){ clearSuggestions(); return; }
+    debouncedFetch(v);
+  });
+
+  input.addEventListener('keydown', (e)=>{
+    const items = sugBox.querySelectorAll('.suggest-item');
+    if(items.length===0) return;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); const next = Math.min(activeIndex+1, items.length-1); highlight(next); items[next].scrollIntoView({block:'nearest'}); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); const prev = Math.max(activeIndex-1, 0); highlight(prev); items[prev].scrollIntoView({block:'nearest'}); }
+    else if(e.key === 'Enter'){ if(activeIndex>=0){ e.preventDefault(); chooseActive(); } } 
+    else if(e.key === 'Escape'){ clearSuggestions(); }
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(!sugBox.contains(e.target) && e.target !== input) clearSuggestions();
+  });
+})();
 
 /* ---------- initial demo ---------- */
 document.getElementById('q').value='Nagpur';
