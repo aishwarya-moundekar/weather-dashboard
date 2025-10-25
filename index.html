@@ -3,73 +3,388 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Weather Dashboard — Cloud Mini Project</title>
+  <title>☁️ Pastel Weather — Cloud Mini Project</title>
   <style>
-    body { font-family: Inter, Arial, sans-serif; margin:0; padding:24px; background:#f6f8fb; color:#0f172a; }
-    .card { max-width:720px; margin:24px auto; background:white; border-radius:12px; box-shadow:0 6px 22px rgba(20,20,40,0.08); padding:20px; }
-    h1{ margin:0 0 12px; font-size:20px; }
-    .controls { display:flex; gap:8px; margin-bottom:16px; }
-    input[type="text"]{ flex:1; padding:10px; border-radius:8px; border:1px solid #e6eef6; }
-    button{ padding:10px 14px; border-radius:8px; border:0; background:#2563eb; color:white; cursor:pointer; }
-    .row{ display:flex; gap:12px; flex-wrap:wrap; }
-    .stat{ flex:1; min-width:140px; background:#f8fbff; padding:12px; border-radius:8px; text-align:center; }
-    .small{ color:#475569; font-size:13px; }
-    .large{ font-size:20px; font-weight:600; margin-top:6px; }
-    footer{ text-align:center; margin-top:18px; color:#64748b; font-size:13px; }
-    .loader{ display:inline-block; width:18px; height:18px; border:3px solid #cbd5e1; border-top-color:#2563eb; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; }
-    @keyframes spin{ to { transform:rotate(360deg) } }
+    :root{
+      --bg-1: #fffafc;
+      --bg-2: #f7fcff;
+      --card: #ffffff;
+      --muted: #64748b;
+      --accent-1: #ffd6e0; /* pink */
+      --accent-2: #e6f7ff; /* baby blue */
+      --accent-3: #fff5cc; /* light yellow */
+      --accent-4: #e9ffe6; /* mint */
+      --glass: rgba(255,255,255,0.8);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body {
+      margin: 0;
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      color: #0f172a;
+      padding: 28px;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* floating blobs background */
+    .blobs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob {
+      position: absolute;
+      filter: blur(30px);
+      opacity: 0.65;
+      transform: translate3d(0,0,0);
+      animation: float 12s ease-in-out infinite;
+      border-radius: 50%;
+    }
+    .blob.a{ width:360px; height:360px; background: linear-gradient(135deg,#ffd6e0,#fff5cc); left:-80px; top:-60px; animation-delay:0s; }
+    .blob.b{ width:300px; height:300px; background: linear-gradient(135deg,#e6f7ff,#fff5cc); right:-100px; top:40px; animation-delay:2s; }
+    .blob.c{ width:260px; height:260px; background: linear-gradient(135deg,#e9ffe6,#ffd6e0); left:20%; bottom:-100px; animation-delay:4s; }
+    @keyframes float { 0% { transform: translateY(0) } 50% { transform: translateY(-25px) } 100% { transform: translateY(0) } }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 920px;
+      margin: 12px auto;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+      margin-bottom: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+
+    header.top {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      justify-content:space-between;
+    }
+    .title {
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .logo {
+      width:56px; height:56px; border-radius:12px;
+      background: linear-gradient(135deg,#fff5cc,#ffd6e0);
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; box-shadow: 0 6px 20px rgba(20,20,40,0.05);
+    }
+    h1{ font-size:18px; margin:0; }
+    .subtitle{ color:var(--muted); font-size:13px; margin-top:2px; }
+
+    .controls {
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+
+    .search {
+      flex:1;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    input[type="text"]{
+      flex:1;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid rgba(15,23,42,0.06);
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.8));
+      box-shadow: inset 0 -6px 14px rgba(12,18,40,0.02);
+      font-size:14px;
+      transition: box-shadow .15s ease, transform .08s ease;
+    }
+    input[type="text"]:focus{ outline:none; box-shadow:0 6px 18px rgba(37,99,235,0.08); transform:translateY(-1px) }
+
+    button.btn {
+      padding:10px 14px;
+      border-radius:12px;
+      border:0;
+      cursor:pointer;
+      font-weight:600;
+      background:linear-gradient(180deg,#a8e3ff,#7fc8ff);
+      color:#06457a;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.12);
+    }
+    button.secondary {
+      background: linear-gradient(180deg,#ffe6f0,#ffd6e0);
+      color:#6a2241;
+      box-shadow:0 6px 18px rgba(233,46,149,0.06);
+    }
+
+    .meta {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-size:13px;
+      color:var(--muted);
+      margin-top:10px;
+    }
+
+    .row {
+      display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;
+    }
+    .stat {
+      flex:1; min-width:160px;
+      border-radius:14px;
+      padding:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
+      box-shadow: 0 6px 18px rgba(12,18,40,0.04);
+      transition: transform .12s ease, box-shadow .12s ease;
+      cursor:default;
+    }
+    .stat:hover { transform: translateY(-4px); box-shadow:0 12px 30px rgba(12,18,40,0.06) }
+    .small { color:var(--muted); font-size:13px }
+    .large { font-size:22px; font-weight:700; margin-top:6px; }
+
+    /* hourly strip */
+    .hourly-strip {
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      overflow:auto;
+      padding:8px 4px 12px 4px;
+    }
+    .hour-card {
+      min-width:120px;
+      background:var(--card);
+      border-radius:12px;
+      padding:10px;
+      text-align:center;
+      box-shadow: 0 8px 22px rgba(20,20,40,0.04);
+      transition: transform .12s ease, background .12s ease;
+      cursor:pointer;
+      border:1px solid rgba(15,23,42,0.03);
+    }
+    .hour-card:hover { transform: translateY(-6px) }
+    .hour-time { font-size:12px; color:var(--muted) }
+    .hour-temp { margin-top:8px; font-weight:700; }
+    .hour-prec { font-size:12px; color:var(--muted); margin-top:6px }
+
+    /* expanded details */
+    .hour-expanded {
+      margin-top:8px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    /* bottom area */
+    footer {
+      margin-top:14px;
+      text-align:center;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    /* loader */
+    .loader {
+      display:inline-block;
+      width:20px; height:20px;
+      border-radius:50%;
+      border:3px solid rgba(15,23,42,0.06);
+      border-top-color: #7fc8ff;
+      animation: spin 1s linear infinite;
+      vertical-align:middle;
+      margin-right:8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg) } }
+
+    /* recent searches */
+    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px }
+    .chip {
+      padding:8px 10px; border-radius:999px; font-size:13px; cursor:pointer;
+      background: linear-gradient(180deg,#fff,#fff);
+      border:1px solid rgba(15,23,42,0.04);
+      box-shadow: 0 6px 14px rgba(12,18,40,0.03);
+    }
+    .chip:hover{ transform:translateY(-3px) }
+
+    /* responsive */
+    @media (max-width:720px){
+      .stat { min-width:140px }
+      .logo{ width:48px; height:48px; font-size:18px }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Weather Dashboard (Open-Meteo)</h1>
-    <div class="controls">
-      <input id="locationInput" placeholder="Enter city e.g. New Delhi or lat,lon (23.03,72.58)" />
-      <button id="searchBtn">Get Weather</button>
+  <div class="blobs" aria-hidden="true">
+    <div class="blob a"></div>
+    <div class="blob b"></div>
+    <div class="blob c"></div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <header class="top">
+        <div class="title">
+          <div class="logo">☁️</div>
+          <div>
+            <h1>Pastel Weather</h1>
+            <div class="subtitle">Cute cloud dashboard — always available demo</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div style="font-size:13px; color:var(--muted)">Units</div>
+          <div>
+            <button id="unitToggle" class="secondary" title="Toggle °C / °F">°C</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="controls">
+        <div class="search">
+          <input id="locationInput" placeholder="Enter city (e.g., Nagpur) or lat,lon (23.03,72.58)" autocomplete="off"/>
+          <button id="searchBtn" class="btn">Get Weather</button>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div id="status" style="display:flex;align-items:center;gap:8px;color:var(--muted)"><span id="busy" style="display:none"><span class="loader"></span>Loading…</span></div>
+        <div style="flex:1"></div>
+        <div id="recentLabel" style="color:var(--muted); font-size:13px">Recent:</div>
+      </div>
+
+      <div class="chips" id="recent"></div>
     </div>
 
-    <div id="result" style="display:none">
-      <div class="small" id="place"></div>
-      <div style="margin-top:12px" id="summary"></div>
+    <div id="mainCard" class="card" style="display:none;">
+      <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
+        <div>
+          <div id="place" style="font-weight:700; font-size:18px"></div>
+          <div id="summary" style="color:var(--muted); margin-top:6px; font-size:13px"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="small">Last updated</div>
+          <div id="lastUpdated" style="font-weight:700"></div>
+        </div>
+      </div>
 
-      <div class="row" style="margin-top:14px">
+      <div class="row">
         <div class="stat">
-          <div class="small">Temperature (°C)</div>
+          <div class="small">Temperature</div>
           <div class="large" id="temp">--</div>
         </div>
         <div class="stat">
-          <div class="small">Wind (km/h)</div>
+          <div class="small">Wind</div>
           <div class="large" id="wind">--</div>
         </div>
         <div class="stat">
-          <div class="small">Precip (mm)</div>
+          <div class="small">Precipitation</div>
           <div class="large" id="prec">--</div>
         </div>
       </div>
 
-      <div style="margin-top:14px">
-        <strong>Hourly (next 24h):</strong>
-        <div id="hourly" style="margin-top:8px; display:flex; gap:8px; overflow:auto; padding-bottom:6px"></div>
-      </div>
+      <div style="margin-top:12px; font-weight:700; color:var(--muted)">Hourly (next 24h)</div>
+      <div id="hourly" class="hourly-strip"></div>
+
+      <footer>
+        Deployed on GitHub Pages — Data from Open-Meteo (geocoding + forecast).
+      </footer>
     </div>
 
-    <div id="busy" style="display:none; margin-top:12px"><span class="loader"></span> loading…</div>
-    <div id="error" style="color:#dc2626; margin-top:12px; display:none"></div>
-
-    <footer>
-      Deployed on GitHub Pages — Data from Open-Meteo & OpenStreetMap.
-    </footer>
+    <div id="error" class="card" style="display:none; border-color:rgba(255,110,110,0.25); background:linear-gradient(180deg,#fff8f8,#fff) ; color:#7a1f1f;">
+      <strong>Error</strong>
+      <div id="errMsg" style="margin-top:8px; color:#7a1f1f"></div>
+    </div>
   </div>
 
 <script>
-async function geocodeCity(q){
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q);
-  const r = await fetch(url);
-  const data = await r.json();
-  if(!data || data.length===0) throw new Error('Location not found');
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
+/* ---------------------------
+   Utilities & state
+   --------------------------- */
+let unit = 'C'; // 'C' or 'F'
+const recentKey = 'pastel-weather-recent';
+function cToF(c){ return (c * 9/5) + 32; }
+function fToC(f){ return (f - 32) * 5/9; }
+function fmtTemp(v){
+  if(v === null || v === undefined || isNaN(v)) return '--';
+  return (unit === 'C') ? `${v.toFixed(1)}°C` : `${cToF(v).toFixed(1)}°F`;
+}
+function showBusy(on){
+  document.getElementById('busy').style.display = on ? 'inline-flex' : 'none';
+}
+function showError(msg){
+  const el = document.getElementById('error');
+  document.getElementById('errMsg').textContent = msg + ' — try a different city or coordinates.';
+  el.style.display = 'block';
+  showBusy(false);
+  document.getElementById('mainCard').style.display = 'none';
 }
 
+/* ---------------------------
+   Recent searches (localStorage)
+   --------------------------- */
+function getRecent(){
+  try{
+    const j = localStorage.getItem(recentKey);
+    if(!j) return [];
+    return JSON.parse(j).slice(0,6);
+  }catch(e){ return [] }
+}
+function addRecent(q){
+  if(!q) return;
+  let list = getRecent();
+  list = list.filter(x => x.toLowerCase() !== q.toLowerCase());
+  list.unshift(q);
+  if(list.length>6) list = list.slice(0,6);
+  localStorage.setItem(recentKey, JSON.stringify(list));
+  renderRecent();
+}
+function renderRecent(){
+  const wrap = document.getElementById('recent');
+  wrap.innerHTML = '';
+  const list = getRecent();
+  if(list.length===0){
+    wrap.innerHTML = '<div style="color:var(--muted)">no recent searches</div>';
+    return;
+  }
+  list.forEach(q=>{
+    const b = document.createElement('div');
+    b.className = 'chip';
+    b.textContent = q;
+    b.addEventListener('click', ()=>{ document.getElementById('locationInput').value = q; doSearch(); });
+    wrap.appendChild(b);
+  });
+}
+renderRecent();
+
+/* ---------------------------
+   Geocoding (Open-Meteo geocoding)
+   --------------------------- */
+async function geocodeCity(q){
+  // Accept "lat,lon" format immediately
+  const latlon = q.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+  if(latlon){
+    return { lat: parseFloat(latlon[1]), lon: parseFloat(latlon[3]), name: `${latlon[1]}, ${latlon[3]}` };
+  }
+
+  const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=1';
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Geocoding API error');
+  const data = await r.json();
+  if(!data || !data.results || data.results.length===0) throw new Error('Location not found');
+  const first = data.results[0];
+  const name = (first.name || '') + (first.admin1 ? ', ' + first.admin1 : '') + (first.country ? ', ' + first.country : '');
+  return { lat: first.latitude, lon: first.longitude, name };
+}
+
+/* ---------------------------
+   Weather fetch (Open-Meteo)
+   --------------------------- */
 async function fetchWeather(lat, lon){
   const params = new URLSearchParams({
     latitude: lat,
@@ -84,64 +399,114 @@ async function fetchWeather(lat, lon){
   return r.json();
 }
 
-function showError(msg){
-  document.getElementById('error').style.display='block';
-  document.getElementById('error').textContent = msg;
-  document.getElementById('busy').style.display='none';
-  document.getElementById('result').style.display='none';
+/* ---------------------------
+   UI render
+   --------------------------- */
+function renderMain(placeName, data){
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('mainCard').style.display = 'block';
+  document.getElementById('place').textContent = placeName;
+  const now = new Date();
+  document.getElementById('lastUpdated').textContent = now.toLocaleString();
+
+  const cw = data.current_weather || {};
+  const temp = (cw.temperature !== undefined ? cw.temperature : (data.hourly && data.hourly.temperature_2m ? data.hourly.temperature_2m[0] : null));
+  const wind = (cw.windspeed !== undefined ? cw.windspeed : null);
+  const prec = (data.hourly && data.hourly.precipitation ? data.hourly.precipitation[0] : null);
+
+  document.getElementById('temp').textContent = fmtTemp(temp);
+  document.getElementById('wind').textContent = (wind !== null && wind !== undefined) ? `${wind.toFixed(1)} km/h` : '--';
+  document.getElementById('prec').textContent = (prec !== null && prec !== undefined) ? `${prec.toFixed(2)} mm` : '--';
+
+  // hourly
+  const hourlyDiv = document.getElementById('hourly');
+  hourlyDiv.innerHTML = '';
+  const hrs = data.hourly;
+  if(hrs && hrs.time){
+    for(let i=0;i<24 && i<hrs.time.length;i++){
+      const t = hrs.time[i];
+      const tmp = hrs.temperature_2m[i];
+      const p = hrs.precipitation[i];
+      const card = document.createElement('div');
+      card.className = 'hour-card';
+      card.innerHTML = `
+        <div class="hour-time">${t.replace('T',' ')}</div>
+        <div class="hour-temp">${fmtTemp(tmp)}</div>
+        <div class="hour-prec">P:${p ? p.toFixed(2) : '0'} mm</div>
+      `;
+      // expandable details
+      card.addEventListener('click', ()=>{
+        const expanded = card.querySelector('.hour-expanded');
+        if(expanded){
+          expanded.remove();
+        } else {
+          const e = document.createElement('div');
+          e.className = 'hour-expanded';
+          e.textContent = `Feels like ${fmtTemp(tmp)} • Precip: ${p ? p.toFixed(2) : '0'} mm`;
+          card.appendChild(e);
+        }
+      });
+      hourlyDiv.appendChild(card);
+    }
+  } else {
+    hourlyDiv.innerHTML = '<div style="color:var(--muted)">Hourly data not available</div>';
+  }
 }
 
-document.getElementById('searchBtn').addEventListener('click', async ()=>{
-  document.getElementById('error').style.display='none';
-  document.getElementById('busy').style.display='block';
-  document.getElementById('result').style.display='none';
-  try{
-    const q = document.getElementById('locationInput').value.trim() || 'New Delhi';
-    let lat, lon, place;
-    const latlon = q.match(/^(-?\\d+(\\.\\d+)?),\\s*(-?\\d+(\\.\\d+)?)$/);
-    if(latlon){
-      lat = latlon[1]; lon = latlon[3]; place = `${lat}, ${lon}`;
-    } else {
-      const g = await geocodeCity(q);
-      lat = g.lat; lon = g.lon; place = g.name;
-    }
-    const w = await fetchWeather(lat, lon);
-    document.getElementById('place').textContent = place;
-    const cw = w.current_weather || {};
-    document.getElementById('temp').textContent = (cw.temperature !== undefined) ? cw.temperature.toFixed(1) : '--';
-    document.getElementById('wind').textContent = (cw.windspeed !== undefined) ? cw.windspeed.toFixed(1) : '--';
-    const next24 = w.hourly;
-    document.getElementById('prec').textContent = (next24 && next24.precipitation && next24.precipitation[0] !== undefined) ? next24.precipitation[0].toFixed(2) : '--';
+/* ---------------------------
+   Main search flow
+   --------------------------- */
+async function doSearch(){
+  const q = document.getElementById('locationInput').value.trim();
+  if(!q){ showError('Please enter a city or coordinates'); return; }
+  showBusy(true);
+  document.getElementById('mainCard').style.display = 'none';
+  document.getElementById('error').style.display = 'none';
 
-    const hourlyDiv = document.getElementById('hourly');
-    hourlyDiv.innerHTML = '';
-    if(next24 && next24.time){
-      for(let i=0;i<24 && i<next24.time.length;i++){
-        const t = next24.time[i];
-        const temp = next24.temperature_2m[i];
-        const p = next24.precipitation[i];
-        const el = document.createElement('div');
-        el.style.minWidth='120px';
-        el.style.background='#fff';
-        el.style.padding='8px';
-        el.style.borderRadius='8px';
-        el.style.boxShadow='0 6px 18px rgba(20,20,40,0.04)';
-        el.innerHTML = `<div style="font-size:12px;color:#64748b">${t.replace('T',' ')}</div>
-                        <div style="margin-top:6px;font-weight:600">${temp ? temp.toFixed(1) : '--'}°C</div>
-                        <div style="font-size:12px;color:#475569">P:${p ? p.toFixed(2) : '0'}mm</div>`;
-        hourlyDiv.appendChild(el);
-      }
-    }
-
-    document.getElementById('busy').style.display='none';
-    document.getElementById('result').style.display='block';
+  try {
+    const g = await geocodeCity(q);
+    const w = await fetchWeather(g.lat, g.lon);
+    renderMain(g.name, w);
+    addRecent(q);
+    showBusy(false);
   } catch(e){
     showError(e.message || 'Unknown error');
   }
+}
+
+/* ---------------------------
+   Unit toggle
+   --------------------------- */
+document.getElementById('unitToggle').addEventListener('click', ()=>{
+  unit = (unit === 'C') ? 'F' : 'C';
+  document.getElementById('unitToggle').textContent = (unit === 'C') ? '°C' : '°F';
+  // refresh displayed temps if visible
+  const tempDiv = document.getElementById('temp');
+  if(tempDiv && tempDiv.textContent && tempDiv.textContent !== '--'){
+    // re-run last search to update numeric temps (simple approach)
+    // we keep the last query in input and re-call doSearch (but not add to recent again)
+    const last = document.getElementById('locationInput').value.trim();
+    if(last) doSearch();
+  }
 });
 
-document.getElementById('locationInput').value = 'New Delhi';
+/* ---------------------------
+   Bind UI events
+   --------------------------- */
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('locationInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') doSearch();
+});
+document.getElementById('locationInput').value = 'Nagpur';
 document.getElementById('searchBtn').click();
+
+/* ---------------------------
+   Accessibility / small polish
+   --------------------------- */
+window.addEventListener('error', (ev)=>{
+  showError('An unexpected error occurred');
+  console.error(ev);
+});
 </script>
 </body>
 </html>
