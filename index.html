@@ -193,17 +193,33 @@ function iconFor(code){ return weatherIcons[code] || '☁️' }
 
 /* ---------- geocode + fetch (Open-Meteo) ---------- */
 async function geocode(q){
-  const latlon = q.match(/^(-?\\d+(?:\\.\\d+)?),\\s*(-?\\d+(?:\\.\\d+)?)/);
-  if(latlon) return { lat: parseFloat(latlon[1]), lon: parseFloat(latlon[2]), name: `${latlon[1]}, ${latlon[2]}` };
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`;
-  const r = await fetch(url);
-  if(!r.ok) throw new Error('Geocoding failed');
-  const j = await r.json();
-  if(!j.results || j.results.length===0) throw new Error('Location not found');
-  const f = j.results[0];
-  const name = `${f.name}${f.admin1? ', '+f.admin1 : ''}${f.country? ', '+f.country : ''}`;
-  return { lat: f.latitude, lon: f.longitude, name };
+  try{
+    // tolerant lat,lon detection (accept "19.2474,73.1373" or "19.2474 73.1373")
+    const latlon = String(q).trim().match(/^\s*([+-]?\d+(?:\.\d+)?)\s*[,\s]\s*([+-]?\d+(?:\.\d+)?)\s*$/);
+    if(latlon){
+      const lat = parseFloat(latlon[1]);
+      const lon = parseFloat(latlon[2]);
+      console.log('geocode: parsed coords', lat, lon);
+      return { lat, lon, name: `${lat.toFixed(4)}, ${lon.toFixed(4)}` };
+    }
+
+    // otherwise call Open-Meteo geocoding
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`;
+    console.log('geocode: calling', url);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Geocoding API returned status ' + res.status);
+    const json = await res.json();
+    if(!json || !json.results || json.results.length === 0) throw new Error('Location not found');
+    const first = json.results[0];
+    const display = `${first.name}${first.admin1? ', '+first.admin1 : ''}${first.country? ', '+first.country : ''}`;
+    console.log('geocode: resolved to', display, first.latitude, first.longitude);
+    return { lat: first.latitude, lon: first.longitude, name: display };
+  } catch(err){
+    console.error('geocode error:', err);
+    throw err;
+  }
 }
+
 
 async function fetchWeather(lat, lon){
   // If you want to proxy through serverless for logging or to avoid rate limits, call your /api/fetchWeather endpoint instead (see serverless example)
