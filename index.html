@@ -281,22 +281,23 @@ function renderMain(data, placeName){
 }
 
 /* ---------- main search flow ---------- */
-async function doSearch(fromGeo=false){
-  const q = document.getElementById('q').value.trim();
-  if(!q && !fromGeo){ showError('Please enter a city or coordinates'); return; }
-  setBusy(true); document.getElementById('main').style.display='none'; document.getElementById('err').style.display='none';
-  try{
-    const g = await geocode(q || '');
-    const w = await fetchWeather(g.lat, g.lon);
-    renderMain(w, g.name);
-    addRecent(q || `${g.lat},${g.lon}`);
-    // Optional: send log to serverless (see serverless example). uncomment when you have /api/log endpoint
-    // fetch('/api/log', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({query:q||'', lat:g.lat, lon:g.lon, when: new Date().toISOString()}) });
+// Direct search using numeric coordinates — bypasses geocoding
+async function doSearchCoords(lat, lon, displayName){
+  setBusy(true);
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('err').style.display = 'none';
+  try {
+    const w = await fetchWeather(lat, lon);
+    // use the provided displayName (if any) else show lat,lon
+    const name = displayName || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    renderMain(w, name);
+    addRecent(name);
     setBusy(false);
-  }catch(e){
-    showError(e.message || 'Unknown error');
+  } catch(e) {
+    showError(e.message || 'Unknown error (coords)');
   }
 }
+
 
 /* ---------- UI events ---------- */
 document.getElementById('go').addEventListener('click', ()=>doSearch());
@@ -312,10 +313,27 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
 
 /* ---------- geolocation quick-get ---------- */
 if(navigator.geolocation){
-  const geoBtn = document.createElement('button'); geoBtn.className='btn secondary'; geoBtn.style.marginLeft='6px'; geoBtn.textContent='Use my location';
-  geoBtn.onclick = ()=>{ setBusy(true); navigator.geolocation.getCurrentPosition(async(pos)=>{ const lat=pos.coords.latitude, lon=pos.coords.longitude; document.getElementById('q').value = `${lat.toFixed(4)},${lon.toFixed(4)}`; await doSearch(true); }, (err)=>{ showError('Location denied or unavailable'); }); };
+  const geoBtn = document.createElement('button');
+  geoBtn.className = 'btn secondary';
+  geoBtn.style.marginLeft = '6px';
+  geoBtn.textContent = 'Use my location';
+  geoBtn.onclick = ()=>{
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(async (pos)=>{
+      // ensure we use plain ASCII comma and decimal dot
+      const lat = Number(pos.coords.latitude);
+      const lon = Number(pos.coords.longitude);
+      // set the input display (optional)
+      document.getElementById('q').value = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+      // call the direct coords search (bypasses geocoding)
+      await doSearchCoords(lat, lon, `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+    }, (err)=>{
+      showError('Location denied or unavailable');
+    });
+  };
   document.querySelector('.search').appendChild(geoBtn);
 }
+
 
 /* ---------- initial demo ---------- */
 document.getElementById('q').value='Nagpur';
