@@ -1,32 +1,59 @@
-# 🌩️ Cloud Weather Dashboard
+# 🌩️ Vatavaraan — Cloud-Powered Weather Intelligence
 
-**Cloud Computing Mini Project** — a lightweight, always-available weather dashboard.
+**Author:** Aishwarya Moundekar  
+**Project Type:** Cloud Computing Mini Project  
+**Live Demo:** [https://aishwarya-moundekar.github.io/weather-dashboard/](https://aishwarya-moundekar.github.io/weather-dashboard/)
 
-## Live demo
-https://aishwarya-moundekar.github.io/weather-dashboard/
+---
 
-## Overview
-This static web app is deployed on **GitHub Pages** and fetches live weather data.
-- Geocoding: **Open-Meteo geocoding API**
-- Weather: **Open-Meteo** (current + hourly)
-- Hosting: **GitHub Pages** (static site hosting)
+### 🧭 Overview
+**Vatavaraan** (Sanskrit for *atmosphere*) is a **cloud-powered weather intelligence dashboard** that delivers real-time meteorological insights using the **Open-Meteo APIs**.  
+Deployed globally via **GitHub Pages**, it demonstrates core **Cloud Computing concepts** such as *API as a Service (AaaS)* and *Platform as a Service (PaaS)*.
 
-## Features
-- Enter a city name or `lat,lon` to fetch current weather.
-- Displays current temperature, wind speed, precipitation and the next 24 hours.
-- Zero API keys required — fully browser-based.
+---
 
-## Tech stack
-- HTML, CSS, JavaScript
-- Public APIs: Open-Meteo (geocoding + forecast)
-- Hosting: GitHub Pages
+### ☁️ Features
+- 🌍 Search by city name or geographic coordinates (`lat,lon`)  
+- 🌡️ Displays temperature, wind speed, and precipitation (current + hourly forecast)  
+- 💻 100% browser-based — no API keys required  
+- 📱 Responsive, pastel-themed UI optimized for all devices  
+- 🔁 Unit toggle (°C / °F) + Recent search memory  
 
-## How to run / verify
-1. Open the live URL above.
-2. Type a city (e.g., `New Delhi`) and click **Get Weather**.
-3. Results show in seconds — the site is permanently hosted on GitHub Pages.
+---
 
-## Notes / Extensibility
-- Can be extended with a backend (serverless function) to log searches or add authentication.
-- Could store user preferences in a small cloud DB (Firebase / DynamoDB).
+### 🔧 Tech Stack
+| Layer | Technology |
+|-------|-------------|
+| **Frontend** | HTML, CSS, JavaScript |
+| **Cloud APIs** | Open-Meteo (Geocoding + Forecast) |
+| **Hosting** | GitHub Pages (Static Web Hosting / PaaS) |
 
+---
+
+### 🚀 How to Run
+1. Open the live URL:  
+   👉 [https://aishwarya-moundekar.github.io/weather-dashboard/](https://aishwarya-moundekar.github.io/weather-dashboard/)
+2. Enter a city (e.g., *Nagpur*, *London*) or coordinates.
+3. Click **Get Weather** — real-time data appears instantly.
+
+---
+
+### 💡 Extensibility
+- Add backend (AWS Lambda / Firebase) to log user searches.  
+- Integrate charts (Chart.js / D3.js) for hourly visualizations.  
+- Implement authentication via Cognito or Firebase Auth.  
+- Host on AWS Amplify or Netlify for scalable production deployment.  
+
+---
+
+### 🧩 Cloud Concepts Demonstrated
+- **Platform as a Service (PaaS):** Hosting via GitHub Pages  
+- **API as a Service (AaaS):** Open-Meteo’s real-time APIs  
+- **Scalability:** Serverless, stateless static hosting  
+- **Global Accessibility:** Always available via CDN-backed cloud deployment  
+
+---
+
+### 📜 License
+© 2025 Aishwarya Moundekar — All Rights Reserved.  
+Educational and demonstrative use permitted.
