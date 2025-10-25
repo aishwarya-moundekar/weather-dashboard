@@ -238,18 +238,17 @@ async function geocode(q){
 
 
 
-async function fetchWeather(lat, lon){
-  // Call the serverless proxy on the same origin (Vercel will serve /api/fetchWeather)
-  const url = `/api/fetchWeather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+async function fetchWeather(lat, lon) {
+  const url = `/.netlify/functions/fetchWeather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
   const r = await fetch(url);
-  if(!r.ok){
-    // Try to show upstream error if available
+  if (!r.ok) {
     let j = null;
     try { j = await r.json(); } catch(e){}
     throw new Error((j && j.error) ? j.error : 'Weather API error');
   }
   return r.json();
 }
+
 
 /* ---------- UI render ---------- */
 let chartInstance = null;
